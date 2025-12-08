@@ -1,42 +1,28 @@
-# Use official PHP image with required extensions
-FROM php:8.2-fpm
+# Use an official PHP image with FPM
+FROM php:8.1-fpm
+
+# Install necessary PHP extensions
+RUN apt-get update && apt-get install -y libpng-dev libjpeg-dev libfreetype6-dev zip git && \
+    docker-php-ext-configure gd --with-freetype --with-jpeg && \
+    docker-php-ext-install gd pdo pdo_mysql
 
 # Set working directory
-WORKDIR /var/www/html
+WORKDIR /var/www
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Copy composer.lock and composer.json
+COPY composer.json composer.lock /var/www/
 
-# Install Composer globally
+# Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Copy only composer files first (for caching)
-COPY composer.json composer.lock ./
+# Install dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-scripts
+# Copy the rest of the application files
+COPY . /var/www
 
-# Copy the rest of the application
-COPY . .
-
-# Run post-install scripts now that artisan exists
-RUN composer dump-autoload --optimize
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan view:cache
-
-# Set permissions (optional, depending on your setup)
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Expose port and start PHP-FPM
+# Expose the port the app runs on
 EXPOSE 9000
+
+# Start PHP-FPM server
 CMD ["php-fpm"]
