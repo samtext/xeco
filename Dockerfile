@@ -1,28 +1,42 @@
-# Use the official PHP image with necessary extensions
+# Use official PHP image with required extensions
 FROM php:8.2-fpm
+
+# Set working directory
+WORKDIR /var/www/html
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
-    libzip-dev \
     curl \
-    && docker-php-ext-install pdo_mysql zip
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /var/www/html
-
-# Copy composer and install dependencies
-COPY composer.lock composer.json ./
+# Install Composer globally
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-RUN composer install --no-dev --optimize-autoloader
+
+# Copy only composer files first (for caching)
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copy the rest of the application
 COPY . .
 
-# Generate Laravel key
-RUN php artisan key:generate
+# Run post-install scripts now that artisan exists
+RUN composer dump-autoload --optimize
+RUN php artisan config:cache
+RUN php artisan route:cache
+RUN php artisan view:cache
 
-# Expose port and run Laravel server
-EXPOSE 8000
-CMD php artisan serve --host=0.0.0.0 --port=8000
+# Set permissions (optional, depending on your setup)
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Expose port and start PHP-FPM
+EXPOSE 9000
+CMD ["php-fpm"]
