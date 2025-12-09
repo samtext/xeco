@@ -5,5 +5,11 @@
       "use": "@vercel/node"
     }
   ],
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.php"
+    }
+  ]
 }
