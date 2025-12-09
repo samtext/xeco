@@ -9,6 +9,6 @@ export default defineConfig({
         }),
     ],
     build: {
-        outDir: 'public/build', // This is the folder where the build will be placed
+        outDir: 'dist', // Change this to 'dist' instead of 'public/build'
     },
 });
