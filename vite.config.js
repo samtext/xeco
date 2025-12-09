@@ -9,6 +9,6 @@ export default defineConfig({
         }),
     ],
     build: {
-        outDir: 'dist',  // This tells Vite to output build files to the 'dist' directory
+        outDir: 'dist',  // Ensure this is set to 'dist'
     },
 });
